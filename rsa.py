@@ -1,79 +1,72 @@
-import random
-from math import gcd
+# Import necessary libraries
+from sympy import gcd, mod_inverse
 
-# Function to check if a number is prime
-def is_prime(num):
-    if num < 2:
-        return False
-    for i in range(2, int(num**0.5) + 1):
-        if num % i == 0:
-            return False
-    return True
-
-# Function to generate a prime number within a range
-def generate_prime(start, end):
-    while True:
-        num = random.randint(start, end)
-        if is_prime(num):
-            return num
-
-# Function to calculate modular multiplicative inverse
-def mod_inverse(a, m):
-    m0, x0, x1 = m, 0, 1
-    while a > 1:
-        q = a // m
-        m, a = a % m, m
-        x0, x1 = x1 - q * x0, x0
-    return x1 + m0 if x1 < 0 else x1
-
-# Key generation function
-def generate_keys():
-    # Generate two distinct prime numbers
-    p = generate_prime(100, 999)
-    q = generate_prime(100, 999)
-    while p == q:
-        q = generate_prime(100, 999)
-    
+# Function to generate RSA keys
+def generate_rsa_keys(p, q, e):
+    # Compute n
     n = p * q
-    phi = (p - 1) * (q - 1)
+    # Compute Euler's Totient Function
+    phi_n = (p - 1) * (q - 1)
     
-    # Choose e such that 1 < e < phi and gcd(e, phi) == 1
-    e = random.choice([x for x in range(2, phi) if gcd(x, phi) == 1])
+    # Check if e is valid
+    if gcd(e, phi_n) != 1:
+        raise ValueError("e must be coprime to φ(n)")
     
-    # Calculate d
-    d = mod_inverse(e, phi)
+    # Compute d (modular multiplicative inverse of e mod phi_n)
+    d = mod_inverse(e, phi_n)
     
-    return ((e, n), (d, n))  # Return public and private keys
+    # Return the public and private keys
+    return (e, n), (d, n)
 
-# Encryption function
-def encrypt(message, public_key):
+# Function to encrypt a plaintext message
+def rsa_encrypt(plaintext, public_key):
     e, n = public_key
-    return [pow(ord(char), e, n) for char in message]
+    m = int(plaintext)
+    if m >= n:
+        raise ValueError("Plaintext must be less than n")
+    c = pow(m, e, n)
+    return c
 
-# Decryption function
-def decrypt(ciphertext, private_key):
+# Function to decrypt a ciphertext
+def rsa_decrypt(ciphertext, private_key):
     d, n = private_key
-    return ''.join([chr(pow(char, d, n)) for char in ciphertext])
+    c = int(ciphertext)
+    m = pow(c, d, n)
+    return m
 
-# Main function to demonstrate RSA
-def rsa_encryption_decryption():
-    print("RSA Encryption and Decryption")
+# Main program for user interaction
+def main():
+    print("=== RSA Cryptography ===")
     
-    # Step 1: Generate keys
-    public_key, private_key = generate_keys()
-    print("\nPublic Key:", public_key)
-    print("Private Key:", private_key)
+    # Step 1: Input values for key generation
+    print("\nStep 1: Key Generation")
+    p = int(input("Enter a prime number (p): "))
+    q = int(input("Enter another prime number (q): "))
+    e = int(input("Enter a public exponent (e): "))
     
-    # Step 2: Get user input for plaintext
-    message = input("\nEnter the plaintext message to encrypt: ")
-    
-    # Step 3: Encrypt the message
-    ciphertext = encrypt(message, public_key)
-    print("\nEncrypted Message (Ciphertext):", ciphertext)
-    
-    # Step 4: Decrypt the ciphertext
-    decrypted_message = decrypt(ciphertext, private_key)
-    print("\nDecrypted Message (Plaintext):", decrypted_message)
+    try:
+        public_key, private_key = generate_rsa_keys(p, q, e)
+        print(f"\nPublic Key: {public_key}")
+        print(f"Private Key: {private_key}")
+    except ValueError as ve:
+        print(f"Error: {ve}")
+        return
 
-# Run the RSA demonstration
-rsa_encryption_decryption()
+    # Step 2: Encryption
+    print("\nStep 2: Encryption")
+    plaintext = input("Enter a plaintext number to encrypt (less than n): ")
+    try:
+        ciphertext = rsa_encrypt(plaintext, public_key)
+        print(f"Ciphertext: {ciphertext}")
+    except ValueError as ve:
+        print(f"Error: {ve}")
+        return
+
+    # Step 3: Decryption
+    print("\nStep 3: Decryption")
+    decrypted_message = rsa_decrypt(ciphertext, private_key)
+    print(f"Decrypted Message: {decrypted_message}")
+
+# Run the main program
+if __name__ == "__main__":
+    main()
